@@ -1,0 +1,131 @@
+
+services:
+  dash:
+    image: mauricenino/dashdot:latest
+    restart: unless-stopped
+    privileged: true
+    ports:
+      - '80:3001'
+    volumes:
+      - /:/mnt/host:ro
+  OCDarr:
+    container_name: OCDarr_custom
+    image: vansmak/custom:OCDarr_amd64
+    environment:
+      TZ: America/Los_Angeles
+    env_file:
+      - /mnt/media/OCDarr/.env
+    volumes:
+      - /mnt/media/OCDarr/logs:/app/logs
+      - /mnt/media/OCDarr/config:/app/config
+      - /mnt/media/OCDarr/temp:/app/temp
+      - /mnt/media/OCDarr/static:/app/static 
+      - /mnt/samba_share/plex_backgrounds:/app/backgrounds
+    ports:
+      - "5001:5001"
+    restart: unless-stopped
+
+  homarr:
+    container_name: homarr
+    image: ghcr.io/ajnart/homarr:latest
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /mnt/media/homarr/configs:/app/data/configs
+      - /mnt/media/homarr/icons:/app/public/icons
+      - /mnt/media/homarr/data:/data
+    ports:
+      - '7575:7575'
+
+  plex:
+    image: linuxserver/plex
+    container_name: plex
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - VERSION=docker
+    volumes:
+      - /mnt/media/config/plex:/config
+      - /mnt/media/Movies:/movies
+      - /mnt/media/Series:/tv
+      - /mnt/photo:/photo 
+      - /mnt/media/music:/music
+    network_mode: host
+    
+    restart: unless-stopped
+
+  sonarr:
+    image: linuxserver/sonarr
+    container_name: sonarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+    volumes: 
+      - /mnt/media/config/sonarr:/config 
+      - /mnt/media/Series:/tv 
+      - /mnt/media/Downloads:/downloads
+    network_mode: host
+   
+    restart: unless-stopped
+
+  radarr:
+    image: linuxserver/radarr
+    container_name: radarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+    volumes:
+      - /mnt/media/config/radarr:/config
+      - /mnt/media/Downloads:/downloads
+      - /mnt/media/Movies:/movies
+    network_mode: host
+    restart: unless-stopped
+
+  sabnzbd:
+    image: linuxserver/sabnzbd
+    container_name: sabnzbd
+    environment:
+      - PUID=1000
+      - PGID=1000
+    volumes:
+      - /mnt/media/config/sabnzbd:/config
+      - /mnt/media/Downloads:/downloads
+      - /mnt/media/Series:/tv
+      - /mnt/media/Movies:/movies
+    network_mode: host
+    restart: unless-stopped
+
+  prowlarr:
+    image: linuxserver/prowlarr
+    container_name: prowlarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+    volumes:
+      - /mnt/media/config/prowlarr:/config
+    network_mode: host
+    restart: unless-stopped
+
+  tautulli:
+    image: linuxserver/tautulli
+    container_name: tautulli
+    environment:
+      - PUID=1000
+      - PGID=1000
+    volumes:
+      - /mnt/media/config/tautulli:/config
+      - /mnt/media/config/plex:/plex
+    ports:
+      - 8181:8181
+    network_mode: host
+    restart: unless-stopped
+
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=86400 # Check for updates once a day
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
