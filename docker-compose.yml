@@ -82,6 +82,174 @@ services:
     restart: unless-stopped
 
   sabnzbd:
+
+services:
+  glances:
+    image: nicolargo/glances:latest-full
+    container_name: glances
+    environment:
+      - GLANCES_OPT=--export influxdb2 -C /etc/glances.conf
+      - GLANCES_EXPORT_INFLUXDB=True
+      - GLANCES_EXPORT_INFLUXDB_HOST=192.168.254.205
+      - GLANCES_EXPORT_INFLUXDB_PORT=8086
+      - GLANCES_EXPORT_INFLUXDB_ORG=home
+      - GLANCES_EXPORT_INFLUXDB_BUCKET=glances
+      - GLANCES_EXPORT_INFLUXDB_TOKEN=${GLANCES_EXPORT_INFLUXDB_TOKEN}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /mnt/media/glances/glances.conf:/etc/glances.conf 
+    network_mode: host
+    pid: host
+    restart: unless-stopped
+
+  influxdb:
+    image: influxdb:2.0
+    container_name: influxdb2
+    ports:
+      - "8086:8086"
+    volumes:
+      - ./influxdb2_data:/var/lib/influxdb2
+    environment:
+      - INFLUXDB_ADMIN_USER=${INFLUXDB_ADMIN_USER}
+      - INFLUXDB_ADMIN_PASSWORD=${INFLUXDB_ADMIN_PASSWORD}
+    restart: unless-stopped 
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    environment:
+      - GF_SECURITY_DISABLE_LOGIN_FORM=true
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+      - GF_CUSTOM_CSS=/usr/share/grafana/public/css/grafana-custom.css
+    volumes:
+      - /mnt/media/grafana:/var/lib/grafana
+      - /mnt/media/grafana/grafana-custom.css:/usr/share/grafana/public/css/grafana-custom.css
+      - /mnt/media/grafana/grafana.ini:/etc/grafana/grafana.ini
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
+  
+  spottube:
+    image: thewicklowwolf/spottube:latest
+    container_name: spottube
+    environment:
+      - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
+      - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
+      - THREAD_LIMIT=2
+    volumes:
+      - /mnt/media/spottube/config:/config
+      - /mnt/media/music:/spottube/downloads   
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+  
+  OCDarr:
+    container_name: OCDarr_custom
+    image: vansmak/custom:OCDarr_amd64
+    environment:
+      TZ: America/Los_Angeles
+    env_file:
+      - /mnt/media/OCDarr/.env
+    volumes:
+      - /mnt/media/OCDarr/logs:/app/logs
+      - /mnt/media/OCDarr/config:/app/config
+      - /mnt/media/OCDarr/temp:/app/temp
+      - /mnt/media/OCDarr/static:/app/static 
+      - /mnt/samba_share/plex_backgrounds:/app/backgrounds
+    ports:
+      - "5001:5001"
+    restart: unless-stopped
+  
+  overseerr:
+    image: sctx/overseerr:latest
+    container_name: overseerr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Los_Angeles  # Set your timezone
+    volumes:
+      - /mnt/media/config/overseerr:/app/config
+    ports:
+      - "5055:5055"  
+    restart: unless-stopped
+
+
+  calibre-web:
+    image: lscr.io/linuxserver/calibre-web
+    container_name: calibre-web
+    environment:
+      - PUID=1000
+      - PGID=1000
+    volumes:
+      - /mnt/media/config/calibre-web:/config
+      - /mnt/media/Books:/books 
+      - /mnt/media/Audiobooks:/audiobooks
+    ports:
+      - "8083:8083"  # Expose port 8083 for Calibre-Web
+    restart: unless-stopped
+
+
+  homarr:
+    container_name: homarr
+    image: ghcr.io/ajnart/homarr:latest
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /mnt/media/homarr/configs:/app/data/configs
+      - /mnt/media/homarr/icons:/app/public/icons
+      - /mnt/media/homarr/data:/data
+    ports:
+      - '7575:7575'
+
+  plex:
+    image: linuxserver/plex
+    container_name: plex
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - VERSION=docker
+    volumes:
+      - /mnt/media/config/plex:/config
+      - /mnt/media/Movies:/movies
+      - /mnt/media/Series:/tv
+      - /mnt/photo:/photo 
+      - /mnt/media/music:/music
+    network_mode: host
+    
+    restart: unless-stopped
+
+  sonarr:
+    image: linuxserver/sonarr
+    container_name: sonarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+    volumes: 
+      - /mnt/media/config/sonarr:/config 
+      - /mnt/media/Series:/tv 
+      - /mnt/media/Downloads:/downloads
+    network_mode: host
+   
+    restart: unless-stopped
+
+  radarr:
+    image: linuxserver/radarr
+    container_name: radarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+    volumes:
+      - /mnt/media/config/radarr:/config
+      - /mnt/media/Downloads:/downloads
+      - /mnt/media/Movies:/movies
+    network_mode: host
+    restart: unless-stopped
+
+  sabnzbd:
     image: linuxserver/sabnzbd
     container_name: sabnzbd
     environment:
@@ -120,11 +288,30 @@ services:
     network_mode: host
     restart: unless-stopped
 
+  readarr:
+    image: linuxserver/readarr:develop
+    container_name: readarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+    volumes:
+      - /mnt/media/config/readarr:/config
+      - /mnt/media/Books:/books    
+      - /mnt/media/Audiobooks:/audiobooks 
+      - /mnt/media/Downloads:/downloads
+    network_mode: host
+    restart: unless-stopped
+
+
   watchtower:
     image: containrrr/watchtower
     container_name: watchtower
     environment:
       - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=86400 # Check for updates once a day
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped - WATCHTOWER_CLEANUP=true
       - WATCHTOWER_POLL_INTERVAL=86400 # Check for updates once a day
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
